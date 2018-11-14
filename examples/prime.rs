@@ -21,9 +21,10 @@ use self::Expr::*;
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub enum Expr {
     Prime(u32),
+    Upto(u32),
 }
 
-pub fn infer(_cache: &HashSet<Expr>, facts: &[Expr]) -> Option<Inference<Expr>> {
+pub fn infer(cache: &HashSet<Expr>, facts: &[Expr]) -> Option<Inference<Expr>> {
     // Put simplification rules first to find simplest set of facts.
     for (ind, ea) in facts.iter().enumerate() {
         match *ea {
@@ -37,7 +38,22 @@ pub fn infer(_cache: &HashSet<Expr>, facts: &[Expr]) -> Option<Inference<Expr>> 
                                 return Some(SimplifyTrue {from: vec![ea.clone()]});
                             }
                         }
+                        _ => {}
                     }
+                }
+            }
+            Upto(n) => {
+                if n > 1 {
+                    let new_prime = Prime(n);
+                    let new_upto = Upto(n-1);
+                    if !cache.contains(&new_prime) && !cache.contains(&new_upto) {
+                        return Some(SimplifyMany {
+                            from: vec![ea.clone()],
+                            to: vec![new_prime, new_upto]
+                        })
+                    }
+                } else {
+                    return Some(SimplifyTrue {from: vec![ea.clone()]});
                 }
             }
         }
@@ -46,7 +62,7 @@ pub fn infer(_cache: &HashSet<Expr>, facts: &[Expr]) -> Option<Inference<Expr>> 
 }
 
 fn main() {
-    let start: Vec<Expr> = (2..100).map(|n| Prime(n)).collect();
+    let start = vec![Upto(100)];
 
     let res = solve_minimum(start, infer);
     for i in 0..res.len() {
