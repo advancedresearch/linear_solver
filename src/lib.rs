@@ -21,6 +21,25 @@
 //! - Constraint solving
 //! - Implement some constraint solving programming language
 //!
+//! ### Linear logic
+//!
+//! When some facts are simplified, e.g.:
+//!
+//! ```text
+//! X, Y <=> Z
+//! ```
+//!
+//! You need two new copies of `X` and `Y` to infer another `Z`.
+//! This is because the solver does not remove all copies.
+//!
+//! When doing classical theorem proving with a linear solver,
+//! it is common to check that every fact is unique in the input,
+//! and that the `cache` is checked before adding new facts.
+//! This ensures that the solver does not add redundant facts.
+//!
+//! However, when doing linear theorem proving,
+//! one can generate redundant facts `Z` for every `X` and `Y`.
+//!
 //! ### Meaning of goals
 //!
 //! Since a linear solver can both introduce new facts
@@ -66,6 +85,7 @@
 //!
 //! Therefore a proof from initial facts is `true`
 //! if it's minimum set of facts does not equals `false`.
+//!
 
 extern crate bloom;
 
@@ -106,6 +126,31 @@ pub fn solve_minimum<T: Clone + PartialEq + Eq + Hash>(
     mut facts: Vec<T>,
     infer: fn(cache: &HashSet<T>, &[T]) -> Option<Inference<T>>
 ) -> Vec<T> {
+    fn remove_from<T: Eq + Hash>(from: &[T], cache: &mut HashSet<T>, facts: &mut Vec<T>) {
+        for new_fact in from {
+            let mut unique = false;
+            let mut i = 0;
+            loop {
+                if i >= facts.len() {break};
+                if new_fact == &facts[i] {
+                    if unique {
+                        unique = false;
+                        break;
+                    }
+                    // Since using swap remove,
+                    // should check the same index twice.
+                    facts.swap_remove(i);
+                    unique = true;
+                } else {
+                    i += 1;
+                }
+            }
+            if unique {
+                cache.remove(&new_fact);
+            }
+        }
+    }
+
     let mut cache = HashSet::new();
     for s in &facts {
         cache.insert(s.clone());
@@ -145,28 +190,12 @@ pub fn solve_minimum<T: Clone + PartialEq + Eq + Hash>(
         if let Some(x) = infer(&cache, &facts) {
             match x {
                 Inference::Simplify {from, to} => {
-                    let mut new_facts = vec![];
-                    for fact in facts.into_iter() {
-                        if !from.iter().any(|fa| fa == &fact) {
-                            new_facts.push(fact)
-                        } else {
-                            cache.remove(&fact);
-                        }
-                    }
-                    new_facts.push(to.clone());
+                    remove_from(&from, &mut cache, &mut facts);
+                    facts.push(to.clone());
                     cache.insert(to);
-                    facts = new_facts;
                 }
                 Inference::SimplifyTrue {from} => {
-                    let mut new_facts = vec![];
-                    for fact in facts.into_iter() {
-                        if !from.iter().any(|fa| fa == &fact) {
-                            new_facts.push(fact)
-                        } else {
-                            cache.remove(&fact);
-                        }
-                    }
-                    facts = new_facts;
+                    remove_from(&from, &mut cache, &mut facts);
                 }
                 Inference::Propagate(x) => {
                     facts.push(x.clone());
