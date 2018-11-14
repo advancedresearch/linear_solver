@@ -21,6 +21,122 @@
 //! - Constraint solving
 //! - Implement some constraint solving programming language
 //!
+//! ### Example
+//!
+//! ```rust
+//! /*
+//!
+//! In this example, we prove the following:
+//!
+//!     X <= Y
+//!     Y <= Z
+//!     Z <= X
+//!     ------
+//!     Y = Z
+//!     Y = X
+//!
+//! */
+//!
+//! extern crate linear_solver;
+//!
+//! use linear_solver::{solve_minimum, Inference};
+//! use linear_solver::Inference::*;
+//!
+//! use std::collections::HashSet;
+//!
+//! use self::Expr::*;
+//!
+//! #[derive(Clone, PartialEq, Eq, Debug, Hash)]
+//! pub enum Expr {
+//!     Var(&'static str),
+//!     Le(Box<Expr>, Box<Expr>),
+//!     Eq(Box<Expr>, Box<Expr>),
+//! }
+//!
+//! pub fn infer(cache: &HashSet<Expr>, facts: &[Expr]) -> Option<Inference<Expr>> {
+//!     // Put simplification rules first to find simplest set of facts.
+//!     for ea in facts {
+//!         if let Le(ref a, ref b) = *ea {
+//!             if a == b {
+//!                 return Some(SimplifyTrue {from: vec![ea.clone()]});
+//!             }
+//!
+//!             for eb in facts {
+//!                 if let Le(ref c, ref d) = *eb {
+//!                     if a == d && b == c {
+//!                         let new_expr = Eq(a.clone(), b.clone());
+//!                         if !cache.contains(&new_expr) {return Some(Simplify {
+//!                             from: vec![ea.clone(), eb.clone()],
+//!                             to: new_expr
+//!                         })}
+//!                     }
+//!                 }
+//!             }
+//!         }
+//!
+//!         if let Eq(ref a, ref b) = *ea {
+//!             for eb in facts {
+//!                 if let Le(ref c, ref d) = *eb {
+//!                     if c == b {
+//!                         let new_expr = Le(a.clone(), d.clone());
+//!                         if !cache.contains(&new_expr) {return Some(Simplify {
+//!                             from: vec![eb.clone()],
+//!                             to: new_expr
+//!                         })}
+//!                     } else if d == b {
+//!                         let new_expr = Le(c.clone(), a.clone());
+//!                         if !cache.contains(&new_expr) {return Some(Simplify {
+//!                             from: vec![eb.clone()],
+//!                             to: new_expr
+//!                         })}
+//!                     }
+//!                 }
+//!
+//!                 if let Eq(ref c, ref d) = *eb {
+//!                     if b == c {
+//!                         let new_expr = Eq(a.clone(), d.clone());
+//!                         if !cache.contains(&new_expr) {return Some(Simplify {
+//!                             from: vec![eb.clone()],
+//!                             to: new_expr
+//!                         })};
+//!                     }
+//!                 }
+//!             }
+//!         }
+//!     }
+//!
+//!     // Put propagation rules last to find simplest set of facts.
+//!     for ea in facts {
+//!         if let Le(ref a, ref b) = *ea {
+//!             for eb in facts {
+//!                 if let Le(ref c, ref d) = *eb {
+//!                     if b == c {
+//!                         let new_expr = Le(a.clone(), d.clone());
+//!                         if !cache.contains(&new_expr) {return Some(Propagate(new_expr))};
+//!                     }
+//!                 }
+//!             }
+//!         }
+//!     }
+//!     None
+//! }
+//!
+//! pub fn var(name: &'static str) -> Box<Expr> {Box::new(Var(name))}
+//!
+//! fn main() {
+//!     let start = vec![
+//!         Le(var("X"), var("Y")),
+//!         Le(var("Y"), var("Z")),
+//!         Le(var("Z"), var("X")),
+//!     ];
+//!
+//!     let res = solve_minimum(start, infer);
+//!     for i in 0..res.len() {
+//!         println!("{:?}", res[i]);
+//!     }
+//! }
+//! ```
+//!
 //! ### Linear logic
 //!
 //! When some facts are simplified, e.g.:
