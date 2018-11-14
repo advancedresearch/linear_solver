@@ -95,6 +95,11 @@ use bloom::{ASMS, BloomFilter};
 
 /// Tells the solver how to treat inference.
 pub enum Inference<T> {
+    /// Consumes all `from` while producing nothing.
+    SimplifyTrue {
+        /// Facts to remove from context to be replaced by nothing.
+        from: Vec<T>
+    },
     /// Consumes `from` and replaces it with `to`.
     Simplify {
         /// Facts to remove from context.
@@ -102,10 +107,12 @@ pub enum Inference<T> {
         /// Fact to replace removed facts.
         to: T
     },
-    /// Consumes all `from` while producing nothing.
-    SimplifyTrue {
-        /// Facts to remove from context to be replaced by nothing.
-        from: Vec<T>
+    /// Consumes all `from` while producing multiple facts `to`.
+    SimplifyMany {
+        /// Facts to remove from context to be replaced by new ones.
+        from: Vec<T>,
+        /// Multiple facts to be added to context.
+        to: Vec<T>
     },
     /// Add new fact.
     Propagate(T),
@@ -189,13 +196,20 @@ pub fn solve_minimum<T: Clone + PartialEq + Eq + Hash>(
         filter.insert(&facts);
         if let Some(x) = infer(&cache, &facts) {
             match x {
+                Inference::SimplifyTrue {from} => {
+                    remove_from(&from, &mut cache, &mut facts);
+                }
                 Inference::Simplify {from, to} => {
                     remove_from(&from, &mut cache, &mut facts);
                     facts.push(to.clone());
                     cache.insert(to);
                 }
-                Inference::SimplifyTrue {from} => {
+                Inference::SimplifyMany {from, to} => {
                     remove_from(&from, &mut cache, &mut facts);
+                    for fact in &to {
+                        cache.insert(fact.clone());
+                    }
+                    facts.extend(to.into_iter());
                 }
                 Inference::Propagate(x) => {
                     facts.push(x.clone());
