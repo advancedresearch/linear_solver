@@ -8,9 +8,9 @@
 //! This technique can also be used to make theorem proving more efficient.
 //!
 //! If you are looking for a solver that does not remove facts,
-//! see see [monotonic_solver](https://github.com/advancedresearch/monotonic_solver)
+//! see [monotonic_solver](https://github.com/advancedresearch/monotonic_solver)
 //!
-//! *Notice! This solver does not support multiple histories.  
+//! *Notice! This solver does not support multiple histories.
 //! It assumes that when facts are simplified,
 //! they prove the same set of facts without the simplifaction.*
 //!
