@@ -3,6 +3,14 @@ name = "linear_solver"
 version = "0.1.0"
 authors = ["Sven Nilsen <bvssvni@gmail.com>"]
 edition = "2018"
+keywords = ["linear", "solver", "theorem", "proving", "reasoning"]
+description = "A linear solver designed to be easy to use with Rust enum expressions"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/advancedresearch/linear_solver.git"
+homepage = "https://github.com/advancedresearch/linear_solver"
+documentation = "https://docs.rs/linear_solver"
+categories = ["algorithms", "science"]
 
 [dependencies]
 bloom = "0.3.2"
