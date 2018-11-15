@@ -21,6 +21,9 @@
 //! - Constraint solving
 //! - Implement some constraint solving programming language
 //!
+//! This project was heavily inspired by
+//! [CHR (Constraint Handling Rules)](https://dtai.cs.kuleuven.be/CHR/)
+//!
 //! ### Example
 //!
 //! ```rust
