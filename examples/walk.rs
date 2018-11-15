@@ -4,7 +4,7 @@ In this example, we reduce a walk (left, right, up, down):
 
     l, l, u, l, r, d, d, r
     ----------------------
-    u, l
+    l, u
 
 */
 
@@ -25,29 +25,13 @@ pub enum Expr {
     Down,
 }
 
-pub fn infer(cache: &HashSet<Expr>, facts: &[Expr]) -> Option<Inference<Expr>> {
+pub fn infer(cache: &HashSet<Expr>, _facts: &[Expr]) -> Option<Inference<Expr>> {
     // Put simplification rules first to find simplest set of facts.
-    for ea in facts {
-        if let Left = *ea {
-            if cache.contains(&Right) {
-                return Some(SimplifyTrue {from: vec![Left, Right]});
-            }
-        }
-        if let Right = *ea {
-            if cache.contains(&Left) {
-                return Some(SimplifyTrue {from: vec![Left, Right]});
-            }
-        }
-        if let Up = *ea {
-            if cache.contains(&Down) {
-                return Some(SimplifyTrue {from: vec![Up, Down]});
-            }
-        }
-        if let Down = *ea {
-            if cache.contains(&Up) {
-                return Some(SimplifyTrue {from: vec![Up, Down]});
-            }
-        }
+    if cache.contains(&Left) && cache.contains(&Right) {
+        return Some(SimplifyTrue {from: vec![Left, Right]});
+    }
+    if cache.contains(&Up) && cache.contains(&Down) {
+        return Some(SimplifyTrue {from: vec![Up, Down]});
     }
     None
 }
