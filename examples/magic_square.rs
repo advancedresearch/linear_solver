@@ -86,7 +86,7 @@ pub fn infer(cache: &HashSet<Expr>, facts: &[Expr]) -> Option<Inference<Expr>> {
 
     // Sorting makes it easier for rules to do their job,
     // and it makes the output easier to read.
-    // Wait for `ExpandAll` to finish to avoid premature cycle.
+    // Wait for `ExpandAll` to finish to avoid premature cycle detection.
     if cache.contains(&SortAll) && !cache.contains(&ExpandAll) {
         for ea in facts {
             if let Sum(ref ls, ref rs) = *ea {
@@ -115,7 +115,7 @@ pub fn infer(cache: &HashSet<Expr>, facts: &[Expr]) -> Option<Inference<Expr>> {
         }
     }
 
-    // Wait for `ExpandAll` to finish so a cycle detecting is triggered prematurely.
+    // Wait for `ExpandAll` to finish so a cycle detecting is not triggered prematurely.
     if !cache.contains(&ExpandAll) {
 
         if cache.contains(&CheckRange) {
