@@ -115,7 +115,7 @@ pub fn infer(cache: &HashSet<Expr>, facts: &[Expr]) -> Option<Inference<Expr>> {
         }
     }
 
-    // Wait for `ExpandAll` to finish so a cycle detecting is not triggered prematurely.
+    // Wait for `ExpandAll` to finish so a cycle detection is not triggered prematurely.
     if !cache.contains(&ExpandAll) {
 
         if cache.contains(&CheckRange) {
