@@ -57,10 +57,10 @@ pub enum Expr {
 pub fn infer(cache: &HashSet<Expr>, _facts: &[Expr]) -> Option<Inference<Expr>> {
     // Put simplification rules first to find simplest set of facts.
     if cache.contains(&Left) && cache.contains(&Right) {
-        return Some(SimplifyTrue {from: vec![Left, Right]});
+        return Some(ManyTrue {from: vec![Left, Right]});
     }
     if cache.contains(&Up) && cache.contains(&Down) {
-        return Some(SimplifyTrue {from: vec![Up, Down]});
+        return Some(ManyTrue {from: vec![Up, Down]});
     }
     None
 }
@@ -122,18 +122,18 @@ pub fn infer(cache: &HashSet<Expr>, facts: &[Expr]) -> Option<Inference<Expr>> {
         if let Le(ref a, ref b) = *ea {
             if a == b {
                 // (X <= X) <=> true
-                return Some(SimplifyTrue {from: vec![ea.clone()]});
+                return Some(OneTrue {from: ea.clone()});
             }
 
             for eb in facts {
                 if let Le(ref c, ref d) = *eb {
                     if a == d && b == c {
                         // (X <= Y) ∧ (Y <= X) <=> (X = Y)
-                        let new_expr = Eq(a.clone(), b.clone());
-                        if !cache.contains(&new_expr) {return Some(Simplify {
-                            from: vec![ea.clone(), eb.clone()],
-                            to: new_expr
-                        })}
+                        return Some(Inference::replace(
+                            vec![ea.clone(), eb.clone()],
+                            Eq(a.clone(), b.clone()),
+                            cache
+                        ))
                     }
                 }
             }
@@ -144,29 +144,29 @@ pub fn infer(cache: &HashSet<Expr>, facts: &[Expr]) -> Option<Inference<Expr>> {
                 if let Le(ref c, ref d) = *eb {
                     if c == b {
                         // (X = Y) ∧ (Y <= Z) <=> (X = Y) ∧ (X <= Z)
-                        let new_expr = Le(a.clone(), d.clone());
-                        if !cache.contains(&new_expr) {return Some(Simplify {
-                            from: vec![eb.clone()],
-                            to: new_expr
-                        })}
+                        return Some(Inference::replace_one(
+                            eb.clone(),
+                            Le(a.clone(), d.clone()),
+                            cache
+                        ));
                     } else if d == b {
                         // (X = Y) ∧ (Z <= Y) <=> (X = Y) ∧ (Z <= X)
-                        let new_expr = Le(c.clone(), a.clone());
-                        if !cache.contains(&new_expr) {return Some(Simplify {
-                            from: vec![eb.clone()],
-                            to: new_expr
-                        })}
+                        return Some(Inference::replace_one(
+                            eb.clone(),
+                            Le(c.clone(), a.clone()),
+                            cache
+                        ));
                     }
                 }
 
                 if let Eq(ref c, ref d) = *eb {
                     if b == c {
                         // (X = Y) ∧ (Y = Z) <=> (X = Y) ∧ (X = Z)
-                        let new_expr = Eq(a.clone(), d.clone());
-                        if !cache.contains(&new_expr) {return Some(Simplify {
-                            from: vec![eb.clone()],
-                            to: new_expr
-                        })};
+                        return Some(Inference::replace_one(
+                            eb.clone(),
+                            Eq(a.clone(), d.clone()),
+                            cache
+                        ));
                     }
                 }
             }
