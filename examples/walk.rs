@@ -28,10 +28,10 @@ pub enum Expr {
 pub fn infer(cache: &HashSet<Expr>, _facts: &[Expr]) -> Option<Inference<Expr>> {
     // Put simplification rules first to find simplest set of facts.
     if cache.contains(&Left) && cache.contains(&Right) {
-        return Some(SimplifyTrue {from: vec![Left, Right]});
+        return Some(ManyTrue {from: vec![Left, Right]});
     }
     if cache.contains(&Up) && cache.contains(&Down) {
-        return Some(SimplifyTrue {from: vec![Up, Down]});
+        return Some(ManyTrue {from: vec![Up, Down]});
     }
     None
 }

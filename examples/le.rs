@@ -33,7 +33,7 @@ pub fn infer(cache: &HashSet<Expr>, facts: &[Expr]) -> Option<Inference<Expr>> {
         if let Le(ref a, ref b) = *ea {
             if a == b {
                 // (X <= X) <=> true
-                return Some(SimplifyOneTrue {from: ea.clone()});
+                return Some(OneTrue {from: ea.clone()});
             }
 
             for eb in facts {
