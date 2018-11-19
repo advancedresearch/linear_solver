@@ -58,10 +58,10 @@
 //! pub fn infer(cache: &HashSet<Expr>, _facts: &[Expr]) -> Option<Inference<Expr>> {
 //!     // Put simplification rules first to find simplest set of facts.
 //!     if cache.contains(&Left) && cache.contains(&Right) {
-//!         return Some(SimplifyTrue {from: vec![Left, Right]});
+//!         return Some(ManyTrue {from: vec![Left, Right]});
 //!     }
 //!     if cache.contains(&Up) && cache.contains(&Down) {
-//!         return Some(SimplifyTrue {from: vec![Up, Down]});
+//!         return Some(ManyTrue {from: vec![Up, Down]});
 //!     }
 //!     None
 //! }
@@ -123,18 +123,18 @@
 //!         if let Le(ref a, ref b) = *ea {
 //!             if a == b {
 //!                 // (X <= X) <=> true
-//!                 return Some(SimplifyTrue {from: vec![ea.clone()]});
+//!                 return Some(OneTrue {from: ea.clone()});
 //!             }
 //!
 //!             for eb in facts {
 //!                 if let Le(ref c, ref d) = *eb {
 //!                     if a == d && b == c {
 //!                         // (X <= Y) ∧ (Y <= X) <=> (X = Y)
-//!                         let new_expr = Eq(a.clone(), b.clone());
-//!                         if !cache.contains(&new_expr) {return Some(Simplify {
-//!                             from: vec![ea.clone(), eb.clone()],
-//!                             to: new_expr
-//!                         })}
+//!                         return Some(Inference::replace(
+//!                             vec![ea.clone(), eb.clone()],
+//!                             Eq(a.clone(), b.clone()),
+//!                             cache
+//!                         ))
 //!                     }
 //!                 }
 //!             }
@@ -145,29 +145,29 @@
 //!                 if let Le(ref c, ref d) = *eb {
 //!                     if c == b {
 //!                         // (X = Y) ∧ (Y <= Z) <=> (X = Y) ∧ (X <= Z)
-//!                         let new_expr = Le(a.clone(), d.clone());
-//!                         if !cache.contains(&new_expr) {return Some(Simplify {
-//!                             from: vec![eb.clone()],
-//!                             to: new_expr
-//!                         })}
+//!                         return Some(Inference::replace_one(
+//!                             eb.clone(),
+//!                             Le(a.clone(), d.clone()),
+//!                             cache
+//!                         ));
 //!                     } else if d == b {
 //!                         // (X = Y) ∧ (Z <= Y) <=> (X = Y) ∧ (Z <= X)
-//!                         let new_expr = Le(c.clone(), a.clone());
-//!                         if !cache.contains(&new_expr) {return Some(Simplify {
-//!                             from: vec![eb.clone()],
-//!                             to: new_expr
-//!                         })}
+//!                         return Some(Inference::replace_one(
+//!                             eb.clone(),
+//!                             Le(c.clone(), a.clone()),
+//!                             cache
+//!                         ));
 //!                     }
 //!                 }
 //!
 //!                 if let Eq(ref c, ref d) = *eb {
 //!                     if b == c {
 //!                         // (X = Y) ∧ (Y = Z) <=> (X = Y) ∧ (X = Z)
-//!                         let new_expr = Eq(a.clone(), d.clone());
-//!                         if !cache.contains(&new_expr) {return Some(Simplify {
-//!                             from: vec![eb.clone()],
-//!                             to: new_expr
-//!                         })};
+//!                         return Some(Inference::replace_one(
+//!                             eb.clone(),
+//!                             Eq(a.clone(), d.clone()),
+//!                             cache
+//!                         ));
 //!                     }
 //!                 }
 //!             }
@@ -281,15 +281,15 @@ use bloom::{ASMS, BloomFilter};
 
 /// Tells the solver how to treat inference.
 pub enum Inference<T> {
-    /// Consumes all `from` while producing nothing.
-    SimplifyTrue {
-        /// Facts to remove from context to be replaced by nothing.
-        from: Vec<T>
-    },
     /// Consumes `from` while producing nothing.
-    SimplifyOneTrue {
+    OneTrue {
         /// Fact to remove from context.
         from: T,
+    },
+    /// Consumes all `from` while producing nothing.
+    ManyTrue {
+        /// Facts to remove from context to be replaced by nothing.
+        from: Vec<T>
     },
     /// Consumes `from` and replaces it with `to`.
     Simplify {
@@ -319,11 +319,11 @@ pub enum Inference<T> {
 impl<T: Eq + Hash> Inference<T> {
     /// Replace `from` with `to`, checking the cache.
     ///
-    /// Returns `SimplifyOneTrue` if `to` already exists,
+    /// Returns `OneTrue` if `to` already exists,
     /// and `SimplifyOne` if `to` does not exist.
     pub fn replace_one(from: T, to: T, cache: &HashSet<T>) -> Self {
         if cache.contains(&to) {
-            Inference::SimplifyOneTrue {from}
+            Inference::OneTrue {from}
         } else {
             Inference::SimplifyOne {from, to}
         }
@@ -331,11 +331,11 @@ impl<T: Eq + Hash> Inference<T> {
 
     /// Replace `from` with `to`, checking the cache.
     ///
-    /// Returns `SimplifyTrue` if `to` already exists,
+    /// Returns `ManyTrue` if `to` already exists,
     /// and `Simplify` if `to` does not exist.
     pub fn replace(from: Vec<T>, to: T, cache: &HashSet<T>) -> Self {
         if cache.contains(&to) {
-            Inference::SimplifyTrue {from}
+            Inference::ManyTrue {from}
         } else {
             Inference::Simplify {from, to}
         }
@@ -432,10 +432,10 @@ pub fn solve_minimum<T: Clone + PartialEq + Eq + Hash>(
         filter.insert(&facts);
         if let Some(x) = infer(&cache, &facts) {
             match x {
-                Inference::SimplifyTrue {from} => {
+                Inference::ManyTrue {from} => {
                     remove_from(&from, &mut cache, &mut facts);
                 }
-                Inference::SimplifyOneTrue {from} => {
+                Inference::OneTrue {from} => {
                     remove_from(&[from], &mut cache, &mut facts);
                 }
                 Inference::Simplify {from, to} => {

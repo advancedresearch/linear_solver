@@ -164,7 +164,7 @@ pub fn infer(cache: &HashSet<Expr>, facts: &[Expr]) -> Option<Inference<Expr>> {
             if cache.contains(&RemoveRefl) {
                 if let Sum(ref ls, ref rs) = *ea {
                     if ls == rs {
-                        return Some(SimplifyOneTrue {from: ea.clone()});
+                        return Some(OneTrue {from: ea.clone()});
                     }
                 }
             }
@@ -174,7 +174,7 @@ pub fn infer(cache: &HashSet<Expr>, facts: &[Expr]) -> Option<Inference<Expr>> {
                     for eb in facts {
                         if let Range {var, ..} = *eb {
                             if var == a {
-                                return Some(SimplifyOneTrue {from: eb.clone()});
+                                return Some(OneTrue {from: eb.clone()});
                             }
                         }
                     }
@@ -348,7 +348,7 @@ pub fn infer(cache: &HashSet<Expr>, facts: &[Expr]) -> Option<Inference<Expr>> {
         }
 
         // Consume `ExpandAll` to allow other simplifications to take place.
-        return Some(SimplifyTrue {from: vec![ExpandAll]});
+        return Some(OneTrue {from: ExpandAll});
     }
 
     // Narrow down alternatives with recursive theorem proving.

@@ -35,7 +35,7 @@ pub fn infer(cache: &HashSet<Expr>, facts: &[Expr]) -> Option<Inference<Expr>> {
                         Prime(j) => {
                             if i % j == 0 {
                                 // Remove the number.
-                                return Some(SimplifyOneTrue {from: ea.clone()});
+                                return Some(OneTrue {from: ea.clone()});
                             }
                         }
                         _ => {}
@@ -50,7 +50,7 @@ pub fn infer(cache: &HashSet<Expr>, facts: &[Expr]) -> Option<Inference<Expr>> {
                         cache
                     ));
                 } else {
-                    return Some(SimplifyOneTrue {from: ea.clone()});
+                    return Some(OneTrue {from: ea.clone()});
                 }
             }
         }
