@@ -286,12 +286,24 @@ pub enum Inference<T> {
         /// Facts to remove from context to be replaced by nothing.
         from: Vec<T>
     },
+    /// Consumes `from` while producing nothing.
+    SimplifyOneTrue {
+        /// Fact to remove from context.
+        from: T,
+    },
     /// Consumes `from` and replaces it with `to`.
     Simplify {
         /// Facts to remove from context.
         from: Vec<T>,
         /// Fact to replace removed facts.
         to: T
+    },
+    /// Consumes `from` and replaces it with `to`.
+    SimplifyOne {
+        /// Fact to remove from context.
+        from: T,
+        /// Fact to replace removed fact.
+        to: T,
     },
     /// Consumes all `from` while producing multiple facts `to`.
     SimplifyMany {
@@ -302,6 +314,44 @@ pub enum Inference<T> {
     },
     /// Add new fact.
     Propagate(T),
+}
+
+impl<T: Eq + Hash> Inference<T> {
+    /// Replace `from` with `to`, checking the cache.
+    ///
+    /// Returns `SimplifyOneTrue` if `to` already exists,
+    /// and `SimplifyOne` if `to` does not exist.
+    pub fn replace_one(from: T, to: T, cache: &HashSet<T>) -> Self {
+        if cache.contains(&to) {
+            Inference::SimplifyOneTrue {from}
+        } else {
+            Inference::SimplifyOne {from, to}
+        }
+    }
+
+    /// Replace `from` with `to`, checking the cache.
+    ///
+    /// Returns `SimplifyTrue` if `to` already exists,
+    /// and `Simplify` if `to` does not exist.
+    pub fn replace(from: Vec<T>, to: T, cache: &HashSet<T>) -> Self {
+        if cache.contains(&to) {
+            Inference::SimplifyTrue {from}
+        } else {
+            Inference::Simplify {from, to}
+        }
+    }
+
+    /// Replace `from` with `to`, checking the cache.
+    ///
+    /// Returns modified `SimplifyMany` where existing terms are removed.
+    pub fn replace_many(from: Vec<T>, mut to: Vec<T>, cache: &HashSet<T>) -> Self {
+        for i in (0..to.len()).rev() {
+            if cache.contains(&to[i]) {
+                to.swap_remove(i);
+            }
+        }
+        Inference::SimplifyMany {from, to}
+    }
 }
 
 enum State<T> {
@@ -385,8 +435,16 @@ pub fn solve_minimum<T: Clone + PartialEq + Eq + Hash>(
                 Inference::SimplifyTrue {from} => {
                     remove_from(&from, &mut cache, &mut facts);
                 }
+                Inference::SimplifyOneTrue {from} => {
+                    remove_from(&[from], &mut cache, &mut facts);
+                }
                 Inference::Simplify {from, to} => {
                     remove_from(&from, &mut cache, &mut facts);
+                    facts.push(to.clone());
+                    cache.insert(to);
+                }
+                Inference::SimplifyOne {from, to} => {
+                    remove_from(&[from], &mut cache, &mut facts);
                     facts.push(to.clone());
                     cache.insert(to);
                 }
