@@ -97,19 +97,18 @@ pub fn infer(cache: &HashSet<Expr>, facts: &[Expr]) -> Option<Inference<Expr>> {
                 sorted_rs.sort();
                 if &sorted_ls != ls || &sorted_rs != rs {
                     let new_expr = Sum(sorted_ls, sorted_rs);
-                    return Some(Simplify {from: vec![ea.clone()], to: new_expr});
+                    return Some(SimplifyOne {from: ea.clone(), to: new_expr});
                 }
             }
 
             if let Sum(ref ls, ref rs) = *ea {
                 // Reorder left and right side.
                 if ls < rs {
-                    let new_expr = Sum(rs.clone(), ls.clone());
-                    if !cache.contains(&new_expr) {
-                        return Some(Simplify {from: vec![ea.clone()], to: new_expr});
-                    } else {
-                        return Some(SimplifyTrue {from: vec![ea.clone()]});
-                    }
+                    return Some(Inference::replace_one(
+                        ea.clone(),
+                        Sum(rs.clone(), ls.clone()),
+                        cache
+                    ));
                 }
             }
         }
@@ -165,7 +164,7 @@ pub fn infer(cache: &HashSet<Expr>, facts: &[Expr]) -> Option<Inference<Expr>> {
             if cache.contains(&RemoveRefl) {
                 if let Sum(ref ls, ref rs) = *ea {
                     if ls == rs {
-                        return Some(SimplifyTrue {from: vec![ea.clone()]});
+                        return Some(SimplifyOneTrue {from: ea.clone()});
                     }
                 }
             }
@@ -175,7 +174,7 @@ pub fn infer(cache: &HashSet<Expr>, facts: &[Expr]) -> Option<Inference<Expr>> {
                     for eb in facts {
                         if let Range {var, ..} = *eb {
                             if var == a {
-                                return Some(SimplifyTrue {from: vec![eb.clone()]});
+                                return Some(SimplifyOneTrue {from: eb.clone()});
                             }
                         }
                     }
@@ -225,12 +224,11 @@ pub fn infer(cache: &HashSet<Expr>, facts: &[Expr]) -> Option<Inference<Expr>> {
                             new_ls.push(ls[i].clone());
                         }
                         new_ls.push(Const(sum));
-                        let new_expr = Sum(new_ls, rs.clone());
-                        if !cache.contains(&new_expr) {
-                            return Some(Simplify {from: vec![ea.clone()], to: new_expr});
-                        } else {
-                            return Some(SimplifyTrue {from: vec![ea.clone()]});
-                        }
+                        return Some(Inference::replace_one(
+                            ea.clone(),
+                            Sum(new_ls, rs.clone()),
+                            cache
+                        ));
                     }
                 }
             }
@@ -248,8 +246,11 @@ pub fn infer(cache: &HashSet<Expr>, facts: &[Expr]) -> Option<Inference<Expr>> {
                                 for k in 0..rs.len() {
                                     if k == j {continue} else {new_rs.push(rs[k].clone())}
                                 }
-                                let new_expr = Sum(new_ls, new_rs);
-                                return Some(Simplify {from: vec![ea.clone()], to: new_expr});
+                                return Some(Inference::replace_one(
+                                    ea.clone(),
+                                    Sum(new_ls, new_rs),
+                                    cache
+                                ));
                             }
                         }
                     }
@@ -270,8 +271,11 @@ pub fn infer(cache: &HashSet<Expr>, facts: &[Expr]) -> Option<Inference<Expr>> {
                                                 .filter(|n| n != &ls[0])
                                                 .chain(rs.clone().into_iter())
                                                 .collect();
-                                            let new_expr = Sum(new_ls, rs2.clone());
-                                            return Some(Simplify {from: vec![eb.clone()], to: new_expr});
+                                            return Some(Inference::replace_one(
+                                                eb.clone(),
+                                                Sum(new_ls, rs2.clone()),
+                                                cache
+                                            ));
                                         }
                                     }
                                 }
@@ -305,12 +309,11 @@ pub fn infer(cache: &HashSet<Expr>, facts: &[Expr]) -> Option<Inference<Expr>> {
                                         new_rs.push(rs[k].clone())
                                     }
                                 }
-                                let new_expr = Sum(new_ls, new_rs);
-                                if !cache.contains(&new_expr) {
-                                    return Some(Simplify {from: vec![ea.clone()], to: new_expr});
-                                } else {
-                                    return Some(SimplifyTrue {from: vec![ea.clone()]});
-                                }
+                                return Some(Inference::replace_one(
+                                    ea.clone(),
+                                    Sum(new_ls, new_rs),
+                                    cache
+                                ));
                             }
                         }
                     }
@@ -353,12 +356,11 @@ pub fn infer(cache: &HashSet<Expr>, facts: &[Expr]) -> Option<Inference<Expr>> {
         // A unique alternative means there is an assignment.
         if let Alternatives(a, ref alternatives) = *ea {
             if alternatives.len() == 1 {
-                let new_expr = Sum(vec![Var(a)], vec![Const(alternatives[0])]);
-                if !cache.contains(&new_expr) {
-                    return Some(Simplify {from: vec![ea.clone()], to: new_expr});
-                } else {
-                    return Some(SimplifyTrue {from: vec![ea.clone()]});
-                }
+                return Some(Inference::replace_one(
+                    ea.clone(),
+                    Sum(vec![Var(a)], vec![Const(alternatives[0])]),
+                    cache
+                ));
             }
             if alternatives.len() == 0 {
                 return Some(Propagate(False));
@@ -386,7 +388,7 @@ pub fn infer(cache: &HashSet<Expr>, facts: &[Expr]) -> Option<Inference<Expr>> {
                             }
                         }
                         let new_expr = Alternatives(a, alternatives);
-                        return Some(Simplify {from: vec![ea.clone()], to: new_expr});
+                        return Some(SimplifyOne {from: ea.clone(), to: new_expr});
                     }
                 }
             }

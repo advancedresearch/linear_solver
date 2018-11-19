@@ -35,7 +35,7 @@ pub fn infer(cache: &HashSet<Expr>, facts: &[Expr]) -> Option<Inference<Expr>> {
                         Prime(j) => {
                             if i % j == 0 {
                                 // Remove the number.
-                                return Some(SimplifyTrue {from: vec![ea.clone()]});
+                                return Some(SimplifyOneTrue {from: ea.clone()});
                             }
                         }
                         _ => {}
@@ -44,16 +44,13 @@ pub fn infer(cache: &HashSet<Expr>, facts: &[Expr]) -> Option<Inference<Expr>> {
             }
             Upto(n) => {
                 if n > 1 {
-                    let new_prime = Prime(n);
-                    let new_upto = Upto(n-1);
-                    if !cache.contains(&new_prime) && !cache.contains(&new_upto) {
-                        return Some(SimplifyMany {
-                            from: vec![ea.clone()],
-                            to: vec![new_prime, new_upto]
-                        })
-                    }
+                    return Some(Inference::replace_many(
+                        vec![ea.clone()],
+                        vec![Prime(n), Upto(n-1)],
+                        cache
+                    ));
                 } else {
-                    return Some(SimplifyTrue {from: vec![ea.clone()]});
+                    return Some(SimplifyOneTrue {from: ea.clone()});
                 }
             }
         }
