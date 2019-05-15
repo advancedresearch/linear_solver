@@ -394,6 +394,24 @@ pub fn solve_minimum<T: Clone + PartialEq + Eq + Hash>(
         }
     }
 
+    // Replace existing fact with new one to stabilize order.
+    fn replace<T: Eq + Hash + Clone>(from: &T, to: &T, cache: &mut HashSet<T>, facts: &mut Vec<T>) {
+        let mut unique = false;
+        for i in 0..facts.len() {
+            if from == &facts[i] {
+                if unique {
+                    unique = false;
+                    break;
+                }
+                facts[i] = to.clone();
+                unique = true;
+            }
+        }
+        if unique {
+            cache.remove(&from);
+        }
+    }
+
     let mut cache = HashSet::new();
     for s in &facts {
         cache.insert(s.clone());
@@ -444,8 +462,7 @@ pub fn solve_minimum<T: Clone + PartialEq + Eq + Hash>(
                     cache.insert(to);
                 }
                 Inference::SimplifyOne {from, to} => {
-                    remove_from(&[from], &mut cache, &mut facts);
-                    facts.push(to.clone());
+                    replace(&from, &to, &mut cache, &mut facts);
                     cache.insert(to);
                 }
                 Inference::SimplifyMany {from, to} => {
