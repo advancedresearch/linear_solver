@@ -1,6 +1,6 @@
 [package]
 name = "linear_solver"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Sven Nilsen <bvssvni@gmail.com>"]
 edition = "2018"
 keywords = ["linear", "solver", "theorem", "proving", "reasoning"]
