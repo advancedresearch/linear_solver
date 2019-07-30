@@ -273,11 +273,12 @@
 //! if it's minimum set of facts does not equals `false`.
 //!
 
-extern crate bloom;
+extern crate cuckoofilter;
 
+use cuckoofilter::CuckooFilter;
 use std::collections::HashSet;
+use std::collections::hash_map::DefaultHasher;
 use std::hash::Hash;
-use bloom::{ASMS, BloomFilter};
 
 /// Tells the solver how to treat inference.
 pub enum Inference<T> {
@@ -417,12 +418,11 @@ pub fn solve_minimum<T: Clone + PartialEq + Eq + Hash>(
         cache.insert(s.clone());
     }
 
-    // Bloom filter of previous sets of facts.
+    // Cuckoo filter of previous sets of facts.
     // Used to detect whether a given set of facts has already been inferred.
-    // Set to a value such that a false positive never happens in practice.
-    let false_positive_rate = 0.00000001;
-    let expected_num_items = 1000000000;
-    let mut filter = BloomFilter::with_rate(false_positive_rate,expected_num_items);
+    // Set to a value such that a false positive likely does not happen in practice.
+    let filter_capacity = 1 << 22;
+    let mut filter: CuckooFilter<DefaultHasher> = CuckooFilter::with_capacity(filter_capacity);
 
     let mut state = State::Solving;
 
@@ -431,7 +431,7 @@ pub fn solve_minimum<T: Clone + PartialEq + Eq + Hash>(
             State::Solving => {
                 if filter.contains(&facts) {
                     state = State::SearchMinimum(facts.clone());
-                    filter = BloomFilter::with_rate(false_positive_rate,expected_num_items);
+                    filter = CuckooFilter::with_capacity(filter_capacity);
                 }
             }
             State::SearchMinimum(ref fa) if filter.contains(&facts) => {
@@ -447,7 +447,7 @@ pub fn solve_minimum<T: Clone + PartialEq + Eq + Hash>(
             }
             _ => {}
         }
-        filter.insert(&facts);
+        filter.add(&facts);
         if let Some(x) = infer(&cache, &facts) {
             match x {
                 Inference::ManyTrue {from} => {
