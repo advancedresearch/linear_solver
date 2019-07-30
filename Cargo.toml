@@ -1,6 +1,6 @@
 [package]
 name = "linear_solver"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["Sven Nilsen <bvssvni@gmail.com>"]
 edition = "2018"
 keywords = ["linear", "solver", "theorem", "proving", "reasoning"]
@@ -13,4 +13,4 @@ documentation = "https://docs.rs/linear_solver"
 categories = ["algorithms", "science"]
 
 [dependencies]
-bloom = "0.3.2"
+cuckoofilter = "0.3.2"
